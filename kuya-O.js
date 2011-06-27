@@ -1,13 +1,30 @@
-var _ = require('underscore'),
-    spawn = require('./spawn').spawn;
+var _ = require('underscore');
 
-exports.deflate = function deflate(obj, ctx) { 
+function spawn(parent, props) {
+    var defs = {}, key;
+    for (key in props) {
+        if (props.hasOwnProperty(key)) {
+            defs[key] = {value: props[key], enumerable: true};
+        }
+    }
+    return Object.create(parent, defs);
+};
+
+function instanceOf(obj, parent) { 
+    do {
+        if( obj === parent ) return true;
+    } while( (obj = Object.getPrototypeOf(obj)) )
+    return false;
+};
+
+
+function deflate(obj, ctx) { 
     if( _.isString(obj) || _.isBoolean(obj) || _.isNumber(obj) || _.isNull(obj) || _.isUndefined(obj) ) { 
         return obj;
     } else if( _.isFunction(obj) ) { 
         return undefined;
     } else if( _.isArray(obj) ) { 
-        return map(obj, function(o) { return exports.deflate(o, ctx); });
+        return map(obj, function(o) { return deflate(o, ctx); });
     } 
     ctx = ctx || {};
     if( !ctx.stack ) { ctx.stack = [obj]; }
@@ -35,12 +52,12 @@ exports.deflate = function deflate(obj, ctx) {
     return ret;
 };
 
-exports.inflate = function inflate(obj, ctx, registry) { 
+function inflate(obj, ctx, registry) { 
     registry = registry || exports.default;
     if( _.isString(obj) || _.isBoolean(obj) || _.isNumber(obj) || _.isNull(obj) || _.isUndefined(obj) ) { 
         return obj;
     } else if( _.isArray(obj) ) { 
-        return map(obj, function(o) { return exports.inflate(o, ctx); });
+        return map(obj, function(o) { return inflate(o, ctx); });
     }
     ctx = ctx || {};
     if( !ctx.stack ) { ctx.stack = [obj]; }
@@ -54,13 +71,13 @@ exports.inflate = function inflate(obj, ctx, registry) {
         return type.$deflate.inflater(ctx);
     } else {
         _.each(_.keys(obj), function(k) { 
-            ret[k] = exports.inflate(ret[k], ctx);
+            ret[k] = inflate(ret[k], ctx);
         });
     }
     return ret;
 };
 
-exports.Registry = function Registry() { 
+function Registry() { 
     var _registry = {},
         registry = {
             add: function(obj) { 
@@ -70,58 +87,16 @@ exports.Registry = function Registry() {
                 return registry[obj.$inflate];
             },
             inflate: function(obj, ctx, registry) { 
-                return exports.inflate(obj, ctx, registry);
+                return inflate(obj, ctx, registry);
             },
-            deflate: exports.deflate
+            deflate: deflate
         };
     return registry;
 }
 
-exports.default = exports.Registry();
-
-
-/*
-var Type1 = {
-    $deflate: { 
-        id: 'type1'
-    },
-    a: 1,
-    b: 2,
-    foo: function() { console.error('foo', this.a); },
-    bar: function() { console.error('bar', this.b); }
-};
-
-var t1 = spawn(Type1);
-
-var Type2 = spawn(Type1, { 
-    $deflate: {
-        id: 'type2',
-        attrs: { 
-            c: false
-        }
-    },
-    a: 3,
-    b: 4,
-    c: 5
-});
-
-var t2a = spawn(Type2);
-t2a.a = 5;
-var t2b = spawn(Type2);
-t2b.a = 7;
-t2b.b = 8;
-t2b.c = 9;
-*/
-
-
-
-/*
-console.error('--------------------------------------');
-console.error('t1');
-console.error(deflate(t1));
-console.error('t2a');
-console.error(deflate(t2a));
-console.error('t2b');
-console.error(deflate(t2b));
-*/
-
+exports.spawn = spawn;
+exports.instanceOf = instanceOf;
+exports.inflate = inflate;
+exports.deflate = deflate;
+exports.Registry = Registry;
+exports.default = Registry();

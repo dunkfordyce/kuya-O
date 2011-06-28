@@ -44,9 +44,14 @@ vows.describe('inflate')
             },
             'rehydrate sub obj': function() { 
                 var t = O.spawn(Type1, {
-                    foo: O.spawn(Type2, {c:1})
-                });
-                assert.ok( O.instanceOf(O.default.inflate(O.default.deflate(t.foo)), Type2) );
+                        foo: O.spawn(Type1, {c:1}),
+                        bar: O.spawn(Type2, {c:1})
+                    }),
+                    d = O.default.deflate(t),
+                    i = O.default.inflate(t);
+
+                assert.ok( O.instanceOf(i.foo, Type1) );
+                assert.ok( O.instanceOf(i.bar, Type2) );
             },
             'custom deflate': function() { 
                 var Type3 = {

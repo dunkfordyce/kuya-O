@@ -10,11 +10,29 @@ function spawn(parent, props) {
     return Object.create(parent, defs);
 };
 
+function protowalk(obj, cb) { 
+    var r;
+    while( obj = Object.getPrototypeOf(obj) ) { 
+        r = cb(obj);
+        if( r !== undefined ) { return r; }
+    }
+}
+
 function instanceOf(obj, parent) { 
-    do {
-        if( obj === parent ) return true;
-    } while( (obj = Object.getPrototypeOf(obj)) )
+    if( obj === parent ) return true;
+    if( protowalk(obj, function(proto) { 
+        if( proto == parent ) { return proto; }
+    }) ) { 
+        return true;
+    }
     return false;
+};
+
+
+function sp(n) { 
+    var ret = '';
+    for( x=0; x!= n; x++ ) { ret += ' '; }
+    return ret;
 };
 
 
@@ -53,6 +71,7 @@ function deflate(obj, ctx) {
 };
 
 function inflate(obj, ctx, registry) { 
+    var spa = sp(((ctx && ctx.stack) ? ctx.stack.length : 0)*4);
     registry = registry || exports.default;
     if( _.isString(obj) || _.isBoolean(obj) || _.isNumber(obj) || _.isNull(obj) || _.isUndefined(obj) ) { 
         return obj;
@@ -64,16 +83,18 @@ function inflate(obj, ctx, registry) {
     else { ctx.stack.push(obj); }
 
     var type = registry.get(obj);
-    delete obj['$inflate'];
-    var ret = type ? spawn(type, obj) : obj;
-
+    if( type ) { 
+        delete obj['$inflate'];
+    }
     if( type && type.$deflate.inflater ) { 
         return type.$deflate.inflater(ctx);
     } else {
         _.each(_.keys(obj), function(k) { 
-            ret[k] = inflate(ret[k], ctx);
+            obj[k] = inflate(obj[k], ctx);
         });
     }
+    var ret = (type ? spawn(type, obj) : obj);
+
     return ret;
 };
 
@@ -95,6 +116,7 @@ function Registry() {
 }
 
 exports.spawn = spawn;
+exports.protowalk = protowalk;
 exports.instanceOf = instanceOf;
 exports.inflate = inflate;
 exports.deflate = deflate;

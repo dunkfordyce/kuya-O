@@ -24,7 +24,8 @@ vows.describe('inflate')
                 assert.ok(b.b);
                 assert.ok(b.hasOwnProperty('b'));
                 assert.ok(!b.hasOwnProperty('a'));
-                
+                b.b = 3;
+                assert.equal(b.b, 3);              
             },
             'deflate std': function() { 
                 assert.ok(O.default.deflate(1));

@@ -1,38 +1,18 @@
 var _ = require('underscore');
 
 function spawn(parent, props) {
-    var defs = {}, key;
-    for (key in props) {
-        if (props.hasOwnProperty(key)) {
-            defs[key] = {value: props[key], enumerable: true};
-        }
-    }
-    return Object.create(parent, defs);
+    return _.extend(Object.create(parent), props);
 };
 
 function protowalk(obj, cb) { 
     var r;
-    while( obj = Object.getPrototypeOf(obj) ) { 
-        r = cb(obj);
-        if( r !== undefined ) { return r; }
-    }
+    while( (obj = Object.getPrototypeOf(obj)) && (r = cb(obj)) === undefined ) { }
+    return r;
 }
 
 function instanceOf(obj, parent) { 
     if( obj === parent ) return true;
-    if( protowalk(obj, function(proto) { 
-        if( proto == parent ) { return proto; }
-    }) ) { 
-        return true;
-    }
-    return false;
-};
-
-
-function sp(n) { 
-    var ret = '';
-    for( x=0; x!= n; x++ ) { ret += ' '; }
-    return ret;
+    return protowalk(obj, function(proto) { if( proto == parent ) { return proto; } });
 };
 
 
@@ -71,7 +51,6 @@ function deflate(obj, ctx) {
 };
 
 function inflate(obj, ctx, registry) { 
-    var spa = sp(((ctx && ctx.stack) ? ctx.stack.length : 0)*4);
     registry = registry || exports.default;
     if( _.isString(obj) || _.isBoolean(obj) || _.isNumber(obj) || _.isNull(obj) || _.isUndefined(obj) ) { 
         return obj;
